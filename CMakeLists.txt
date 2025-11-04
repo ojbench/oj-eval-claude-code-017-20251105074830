@@ -10,4 +10,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=c++17 -Wall -Wextra")
 
 # Create the executable named 'code'
-add_executable(code main.cpp train_system.cpp train_system.h)
+add_executable(code main.cpp train_system.cpp train_system.h command_parser.cpp command_parser.h)
