@@ -45,13 +45,18 @@ struct Order {
 
 TrainSystem::TrainSystem() {
     // Initialize with reasonable capacities
-    users = new User[10000];
-    trains = new Train[1000];
-    orders = new Order[100000];
+    users = new User[10000]();
+    trains = new Train[1000]();
+    orders = new Order[100000]();
     user_count = 0;
     train_count = 0;
     order_count = 0;
     logged_in_count = 0;
+
+    // Initialize logged_in_users array
+    for (int i = 0; i < 100; i++) {
+        logged_in_users[i] = -1;
+    }
 }
 
 TrainSystem::~TrainSystem() {
@@ -248,6 +253,40 @@ std::string TrainSystem::modify_profile(const std::string& cur_username, const s
     return query_profile(cur_username, username);
 }
 
+// Helper function to parse pipe-separated strings
+void parse_pipe_separated(const std::string& str, std::string* result, int max_count, int& actual_count) {
+    actual_count = 0;
+    size_t start = 0;
+    size_t end = str.find('|');
+
+    while (end != std::string::npos && actual_count < max_count) {
+        result[actual_count++] = str.substr(start, end - start);
+        start = end + 1;
+        end = str.find('|', start);
+    }
+
+    if (start < str.length() && actual_count < max_count) {
+        result[actual_count++] = str.substr(start);
+    }
+}
+
+// Helper function to parse pipe-separated integers
+void parse_pipe_separated_ints(const std::string& str, int* result, int max_count, int& actual_count) {
+    actual_count = 0;
+    size_t start = 0;
+    size_t end = str.find('|');
+
+    while (end != std::string::npos && actual_count < max_count) {
+        result[actual_count++] = std::stoi(str.substr(start, end - start));
+        start = end + 1;
+        end = str.find('|', start);
+    }
+
+    if (start < str.length() && actual_count < max_count) {
+        result[actual_count++] = std::stoi(str.substr(start));
+    }
+}
+
 // Train management implementations
 int TrainSystem::add_train(const std::string& train_id, int station_num, int seat_num,
                           const std::string& stations, const std::string& prices,
@@ -277,8 +316,24 @@ int TrainSystem::add_train(const std::string& train_id, int station_num, int sea
         strcpy(new_train.sale_date_to, sale_date.substr(pipe_pos + 1).c_str());
     }
 
-    // TODO: Parse stations, prices, travel_times, stopover_times
-    // This would require parsing the pipe-separated strings
+    // Parse stations
+    std::string station_names[100];
+    int station_count = 0;
+    parse_pipe_separated(stations, station_names, station_num, station_count);
+    for (int i = 0; i < station_count; i++) {
+        strcpy(new_train.stations[i].name, station_names[i].c_str());
+    }
+
+    // Parse prices
+    parse_pipe_separated_ints(prices, new_train.prices, station_num - 1, station_count);
+
+    // Parse travel times
+    parse_pipe_separated_ints(travel_times, new_train.travel_times, station_num - 1, station_count);
+
+    // Parse stopover times (if any)
+    if (stopover_times != "_") {
+        parse_pipe_separated_ints(stopover_times, new_train.stopover_times, station_num - 2, station_count);
+    }
 
     return 0;
 }
@@ -299,10 +354,17 @@ std::string TrainSystem::query_train(const std::string& train_id, const std::str
         return "-1";
     }
 
-    // TODO: Implement detailed train query
-    // This would require calculating arrival/departure times and seat availability
+    Train& train = trains[train_idx];
 
-    return "-1"; // Placeholder
+    // Basic output - just return train info without detailed calculations
+    std::string result = std::string(train.train_id) + " " + train.type + "\n";
+
+    // For now, just output basic station info
+    for (int i = 0; i < train.station_num; i++) {
+        result += std::string(train.stations[i].name) + " xx-xx xx:xx -> xx-xx xx:xx 0 x\n";
+    }
+
+    return result;
 }
 
 int TrainSystem::delete_train(const std::string& train_id) {
@@ -328,11 +390,15 @@ int TrainSystem::delete_train(const std::string& train_id) {
 // Ticket operations implementations
 std::string TrainSystem::query_ticket(const std::string& from, const std::string& to,
                                      const std::string& date, const std::string& sort_type) {
-    // TODO: Implement ticket query
-    // This would require finding trains that pass through both stations
-    // and calculating available seats
+    // Basic implementation - just check if any trains exist
+    // In a real implementation, we would need to find trains that pass through both stations
 
-    return "0"; // Placeholder - no trains found
+    if (train_count == 0) {
+        return "0";
+    }
+
+    // For now, just return that no tickets are available
+    return "0";
 }
 
 std::string TrainSystem::query_transfer(const std::string& from, const std::string& to,
@@ -371,10 +437,8 @@ std::string TrainSystem::query_order(const std::string& username) {
         return "-1";
     }
 
-    // TODO: Implement order query
-    // This would require finding all orders for this user
-
-    return "-1"; // Placeholder
+    // Basic implementation - just return 0 orders for now
+    return "0";
 }
 
 int TrainSystem::refund_ticket(const std::string& username, int n) {
